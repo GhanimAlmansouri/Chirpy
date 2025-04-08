@@ -2,6 +2,8 @@ package auth
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -14,9 +16,9 @@ func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (str
 		Issuer:    "chirpy",
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn).UTC()),
-		Subject:   userID.String()})
+		Subject:   userID.String()}) //Creates a new claim called token, the claim contains information that verifies the user.
 
-	signedToken, err := token.SignedString([]byte(tokenSecret))
+	signedToken, err := token.SignedString([]byte(tokenSecret)) // the claim is signed in order to verify it by the server. It will later be used to verify the user requests.
 	if err != nil {
 		return "", err
 	}
@@ -47,5 +49,22 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	}
 
 	return userID, nil
+
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	var bearerToken string
+
+	bearerToken = headers.Get("Authorization")
+	if bearerToken == "" {
+		return "", fmt.Errorf("No token found")
+	}
+
+	if !strings.HasPrefix(bearerToken, "Bearer") {
+		return "", fmt.Errorf("malformed authorization header")
+	}
+
+	bearerToken = strings.TrimSpace(bearerToken[7:])
+	return bearerToken, nil
 
 }
